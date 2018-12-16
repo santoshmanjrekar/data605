@@ -1,0 +1,439 @@
+---
+title: "Data605-Final project"
+author: "Santosh Manjrekar"
+date: "December 11, 2018"
+output: 
+  html_document:
+    toc: true
+    toc_float: true
+    code_folding: hide
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+#suppressMessages(suppressWarnings(library('pracma')))
+```
+
+##Computational Mathematics
+
+####Problem-1
+
+Pick X4 varibale as X and Y4 variable as Y.
+
+```{r}
+Y <- c(20.2, 18.6, 22.6, 11.4, 23.6, 24.0, 26.0, 26.8, 19.7, 22.7, 16.8, 20.2, 21.7, 20.9, 26.9, 16.3, 19.9, 15.5, 26.5, 21.7)
+X <- c(9.3, 12.4, 19.9, 6.9, -1.0, 10.6, 6.4, 10.6, 1.2, 7.7, 15.5, 6.9, 13.7, 3.7, 4.4, 11.5, 4.2, 13.9, 12.9, 1.2)
+```
+
+###Probability.   
+
+Calculate as a minimum the below probabilities a through c.  Assume the small letter "x" is estimated as the 3d quartile of the X variable, and the small letter "y" is estimated as the 1st quartile of the Y variable.  Interpret the meaning of all probabilities.
+
+```{r}
+#Calculate 3rd quartile of x
+(x <- quantile(X,0.75))
+```
+
+```{r}
+#calculate 1st quartile of y
+(y <- quantile(Y,0.25))
+```
+  a. P(X > x| Y > y)
+  
+P(X > x| Y > y) = $\frac{(P X > x, Y >y)}{P(Y > y)}$ = $\frac{(P X > x, Y > y)}{P(Y > y)}$ = 0.2
+```{r}
+length(X[X>x & Y>y])/length(Y[Y>y])
+```
+
+ b.P(X>x , Y>y)
+ 
+ P(X > x| Y > y) = $\frac{(P X > x| Y >y)}{P(Y > y)}$ = 0.15
+
+```{r}
+length(X[X>x & Y>y])/length(Y)
+
+```
+ c. P(X < x| Y < y)
+  
+P(X < x| Y > y) = $\frac{(P( X < x, Y > y)}{P(Y > y)}$ = $\frac{P(< x)P(Y > y)}{P(Y > y)}$ = 0.8
+
+```{r}
+length(X[X<x & Y>y])/length(Y[Y>y])
+```
+
+###In addition, make a table of counts as shown below.
+
+```{r}
+library(knitr)
+
+a0 <- "<= 1st quartile"
+a1 <- length(X[Y<=y & X<=x])
+a2 <- length(X[Y>y & X<=x]) 
+a3 <- a1 + a2 
+
+b0 <- "> 1st quartile"
+b1 <- length(X[Y<=y & X>x]) 
+b2 <- length(X[Y>y & X>x]) 
+b3 <- b1 + b2
+
+c0 <- "Total"
+c1 <- a1 + b1
+c2 <- a2 + b2
+c3 <- c1 + c2
+ 
+rownames = c()
+colnames = c("y/x", "<= 3rd quartile", "> 3rd quartile", "Total")
+kable(matrix(c(a0,a1,a2,a3,b0,b1,b2,b3,c0,c1,c2,c3),nrow = 3, byrow = TRUE, dimnames = list(rownames, colnames)))
+```
+
+###Does splitting the training data in this fashion make them independent?
+
+Let A be the new variable counting those observations above the 1st quartile for X, and let B be the new variable counting those observations above the 1st quartile for Y. Does P(AB)=P(A)P(B)? Check mathematically, and then evaluate by running a Chi Square test for association.
+
+```{r}
+A <- X > x
+B <- Y > y
+
+probability_AB <- sum(A[B])
+cat("P(AB) = ", probability_AB/length(X), "\n")
+```
+
+```{r}
+probability_A <- sum(A)/length(X)
+probability_B <- sum(B)/length(X)
+cat("P(A)P(B) = ", probability_A*probability_B, "\n")
+```
+
+We conclude that P(AB)$\neq$P(A)P(B) so A and B are not independent.
+
+Chi-Square test on A, B for association:
+```{r}
+ptest <- chisq.test(rbind(x,y))
+print(ptest)
+```
+The p-value indicates the two variables are statistically dependent.
+
+####Problem-2
+
+###Descriptive and Inferential Statistics.
+
+* Providing univariate descriptive statistics and appropriate plots for the training data set.
+
+```{r}
+suppressWarnings(suppressMessages(library(ggplot2)))
+suppressWarnings(suppressMessages(library(corrplot)))
+```
+
+
+
+```{r}
+train <- read.csv('https://raw.githubusercontent.com/santoshmanjrekar/data605/master/train.csv')
+test <- read.csv('https://raw.githubusercontent.com/santoshmanjrekar/data605/master/test.csv')
+
+cat("Training dataset count of rows and columns: ", dim(train))
+
+
+```
+```{r}
+cat("Testing dataset count of rows and columns: ", dim(test))
+```
+
+
+```{r}
+#Let's see some sample training data
+head(train)
+```
+```{r}
+#Lets check the summary statistics for training data 
+summary(train)
+```
++ Provide a scatterplot matrix for at least two of the independent variables and the dependent variable.
+```{r}
+#Lets have SalePrice as dependent variable and TotalBsmtSF and GarageArea as two independednt variables
+#Scatter Plot Matrics
+suppressWarnings(suppressMessages(library(psych)))
+pairs.panels(train[,c('SalePrice','TotalBsmtSF','GarageArea')], 
+             method = "pearson", # correlation method
+             hist.col = "#00AFBB",
+             density = TRUE,  # show density plots
+             ellipses = TRUE # show correlation ellipses
+)
+```
+
+
+###Derive a correlation matrix for any THREE quantitative variables in the dataset.
+
+```{r}
+df_matrix <- train[c("TotalBsmtSF","GarageArea", "SalePrice")]
+corr_matrix <- cor(df_matrix, use="complete.obs", method="kendall")
+corrplot(corr_matrix, method = "circle")
+```
+
+###Test the hypotheses that the correlations between each pairwise set of variables is 0 and provide a 80% confidence interval.
+```{r}
+#CI 80% for each variable
+cor.test(train$TotalBsmtSF, train$SalePrice, method = c("pearson", "kendall", "spearman"), conf.level = 0.8)
+```
+```{r}
+#CI 80% = [0.60, 0.64]
+cor.test(train$GarageArea, train$SalePrice, method = c("pearson", "kendall", "spearman"), conf.level = 0.8)
+## 
+```
+```{r}
+#CI 80% = [0.46, 0.51]
+cor.test(train$GarageArea, train$TotalBsmtSF, method = c("pearson", "kendall", "spearman"), conf.level = 0.8)
+```
+
+
+
+###Discuss the meaning of your analysis. Would you be worried about family wise error? Why or why not?
+
+P-value for each of case above is less than 0.05, we reject null hypothesis and accept alternative hypothesis that true correlation is not equal to 0 for each variable.
+
+familywise error rate = 1 - (1-alpha) = 1 - 0.8 = 0.2. 
+This means that the probability of a type I error is just over 20%, which is pretty high considering only 1 test was performed. I would worry about it much.
+
+###Linear Algebra and Correlation.
+
++Invert your 3 x 3 correlation matrix from above. (This is known as the precision matrix and contains variance inflation factors on the diagonal.) Multiply the correlation matrix by the precision matrix, and then multiply the precision matrix by the correlation matrix. Conduct LU decomposition on the matrix.
+
+```{r}
+#Inverting matrix and multiplying
+suppressWarnings(suppressMessages(library(matlib)))
+```
+
+```{r}
+A <- cor(train[, c('TotalBsmtSF','GarageArea', 'SalePrice')], method = c("pearson", "kendall", "spearman"))
+B <- inv(A)
+
+AB = A * B
+BA = B * A
+I = diag(nrow(A))
+AB
+```
+```{r}
+BA
+```
+
+```{r}
+I
+```
+
+```{r}
+#Note that AB = BA but not equal to I.
+
+#LU decomposition
+library(Matrix)
+mm <- Matrix(A)
+str(lum <- lu(mm))
+```
+
+```{r}
+elu <- expand(lum)
+elu # three components: "L", "U", and "P", the permutation
+```
+
+```{r}
+elu$L %*% elu$U
+```
+```{r}
+(m2 <- with(elu, P %*% L %*% U)) # the same as 'mm'
+```
+
+
+###Calculus-Based Probability & Statistics.
+
+Many times, it makes sense to fit a closed form distribution to data. Select a variable in the Kaggle.com training dataset that is skewed to the right, shift it so that the minimum value is absolutely above zero if necessary. Then load the MASS package and run fitdistr to fit an exponential probability density function. (See https://stat.ethz.ch/R-manual/R-devel/library/MASS/html/fitdistr.html ). Find the optimal value of ??? for this distribution, and then take 1000 samples from this exponential distribution using this value (e.g., rexp(1000, ???)). Plot a histogram and compare it with a histogram of your original variable. Using the exponential pdf, find the 5th and 95th percentiles using the cumulative distribution function (CDF). Also generate a 95% confidence interval from the empirical data, assuming normality. Finally, provide the empirical 5th percentile and 95th percentile of the data. Discuss.
+
+```{r}
+#From summary of train data, we pick any variable that has median < mean.
+#BsmtUnfSF has median < mean. Let's choose this.
+summary(train$BsmtUnfSF)
+```
+```{r}
+#To me, BsmtUnfSF = 0 does not make sense. Let's filter these out
+suppressWarnings(suppressMessages(library(MASS)))
+suppressWarnings(suppressMessages(library(rcompanion)))
+Turbidity = train$BsmtUnfSF
+Turbidity = Turbidity[Turbidity>0]
+Turbidity
+```
+
+```{r}
+#Let's plot normal histogram of filtered data
+plotNormalHistogram(Turbidity)
+```
+
+```{r}
+qqnorm(Turbidity,
+       ylab="Sample Quantiles for Turbidity")
+qqline(Turbidity, 
+       col="red")
+```
+```{r}
+#The data is indeed postively skewed and QQ plot shows the data has exponential shape.
+
+#Square root transformation
+T_sqrt = sqrt(Turbidity)
+plotNormalHistogram(T_sqrt)
+```
+```{r}
+summary(T_sqrt)
+```
+```{r}
+#Cube -- from the shape, it looks like cube works the best
+T_cub = sign(Turbidity) * abs(Turbidity)^(1/3)   # Avoid complex numbers 
+plotNormalHistogram(T_cub)
+```
+```{r}
+summary(T_cub)
+```
+```{r}
+#Log
+T_log = log(Turbidity)
+plotNormalHistogram(T_log)
+```
+```{r}
+summary(T_log)
+```
+
+```{r}
+#Testing fit distr
+estimate_original <- fitdistr(Turbidity, "exponential")
+estimate_sqrt <- fitdistr(T_sqrt, "exponential")
+estimate_cube <- fitdistr(T_cub, "exponential")
+estimate_log <- fitdistr(T_log, "exponential")
+
+
+#Let's compare each estimate
+
+
+#original vs original_exp
+
+#Skewness
+Turbidity_exp = rexp(1000,rate = estimate_original$estimate)
+
+plotNormalHistogram(Turbidity)
+```
+```{r}
+plotNormalHistogram(Turbidity_exp)
+```
+
+```{r}
+#quantile 5%, 95%
+quantile(Turbidity, c(.05, .95))
+```
+
+```{r}
+quantile(Turbidity_exp, c(.05, .95))
+```
+```{r}
+summary(Turbidity)
+```
+```{r}
+summary(Turbidity_exp)
+```
+```{r}
+#original vs original_sqrt_exp
+
+#Skewness
+T_sqrt_exp = rexp(1000,rate = estimate_sqrt$estimate)
+
+plotNormalHistogram(Turbidity)
+```
+```{r}
+plotNormalHistogram(T_sqrt_exp)
+```
+```{r}
+#quantile 5%, 95%
+quantile(Turbidity, c(.05, .95))
+```
+```{r}
+quantile(T_sqrt_exp, c(.05, .95))
+```
+
+```{r}
+#original vs original_cube_exp
+
+#Skewness
+T_cube_exp = rexp(1000,rate = estimate_cube$estimate)
+
+plotNormalHistogram(Turbidity)
+```
+
+```{r}
+plotNormalHistogram(T_cube_exp)
+```
+```{r}
+#quantile 5%, 95%
+quantile(Turbidity, c(.05, .95))
+```
+
+```{r}
+quantile(T_cube_exp, c(.05, .95))
+```
+```{r}
+#original vs original_log_exp
+
+#Skewness
+T_log_exp = rexp(1000,rate = estimate_log$estimate)
+
+plotNormalHistogram(Turbidity)
+```
+```{r}
+plotNormalHistogram(T_log_exp)
+```
+```{r}
+#quantile 5%, 95%
+quantile(Turbidity, c(.05, .95))
+```
+```{r}
+quantile(T_log_exp, c(.05, .95))
+```
+
+###Explain CI 95%.
+
+In conclusion, we can see that exponential density function transform original datasets, whether they were transformed in to log, sqrt, cube or stayed original, into exponential shape. Note that datasets applied with exponential function are more heavily skewed to the right than original datasets, according to Normal Histogram.
+
+###Modeling
+
+Build some type of multiple regression model and submit your model to the competition board. Provide your complete model summary and results with analysis. Report your Kaggle.com user name and score.
+
+```{r}
+regression <- lm(SalePrice ~ LotArea + LotFrontage + BldgType + OverallQual + BsmtQual +  GarageArea + GarageYrBlt + GrLivArea + TotalBsmtSF, data = train)
+summary(regression)
+```
+```{r}
+new_regression <- update(regression, . ~ . - GarageYrBlt)
+summary(new_regression)
+```
+
+```{r}
+plot(fitted(new_regression), resid(new_regression))
+```
+```{r}
+qqnorm(resid(new_regression))
+```
+
+```{r}
+SalePrice <- predict(new_regression, newdata = test)
+Id <- 1461:2919
+prediction <- data.frame(Id, SalePrice)
+head(prediction)
+```
+
+```{r}
+summary(prediction)
+```
+
+```{r}
+prediction$SalePrice[is.na(prediction$SalePrice)] <- 0
+write.csv(prediction, "kaggle_submission.csv",row.names=F)
+```
+Kaggle Username:santoshmmanjrekar
+
+Kaggle Score : 5.05
+
+Kaggle Submitted File - https://github.com/santoshmanjrekar/data605/blob/master/kaggle_submission.csv
+
